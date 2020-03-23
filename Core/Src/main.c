@@ -20,6 +20,10 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "spi.h"
+#include "tim.h"
+#include "usart.h"
+#include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -46,10 +50,6 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-SPI_HandleTypeDef hspi1;
-SPI_HandleTypeDef hspi2;
-
-UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
@@ -57,12 +57,7 @@ UART_HandleTypeDef huart1;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_SPI1_Init(void);
-static void MX_SPI2_Init(void);
-static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
 void InputMessageHandler(char *message);
 /* USER CODE END PFP */
 
@@ -103,31 +98,11 @@ int main(void)
   MX_SPI1_Init();
   MX_SPI2_Init();
   MX_USART1_UART_Init();
+  MX_TIM2_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   NRF_SetDefaultSettings();
   SR_SetValue(0x0000);
-
-  /*
-     * DEBUG
-     */
-    uint8_t status = NRF_ReadReg(NRF_REG_STATUS);
-    uint8_t rxAddrP0[5];
-    NRF_ReadMBReg(NRF_REG_RX_ADDR_P0, rxAddrP0, 5);
-    uint8_t rxAddrP1[5];
-    NRF_ReadMBReg(NRF_REG_RX_ADDR_P1, rxAddrP1, 5);
-    //rx addr p2-5
-    uint8_t txAddr[5];
-    NRF_ReadMBReg(NRF_REG_TX_ADDR, txAddr, 5);
-    //rx payload width
-    uint8_t enableAA = NRF_ReadReg(NRF_REG_EN_AA);
-    uint8_t enableRXAddr = NRF_ReadReg(NRF_REG_EN_RXADDR);
-    uint8_t setupAW = NRF_ReadReg(NRF_REG_SETUP_AW);
-    uint8_t setuptRETR = NRF_ReadReg(NRF_REG_SETUP_RETR);
-    uint8_t channel = NRF_ReadReg(NRF_REG_RF_CH);
-    uint8_t rfSetup = NRF_ReadReg(NRF_REG_RF_SETUP);
-    uint8_t config = NRF_ReadReg(NRF_REG_CONFIG);
-    uint8_t dynpd = NRF_ReadReg(NRF_REG_DYNPD);
-    uint8_t feature = NRF_ReadReg(NRF_REG_FEATURE);
   /* USER CODE END 2 */
  
  
@@ -138,41 +113,20 @@ int main(void)
   while (1)
   {
   	if(NRF_IsAvailablePacket())
-  		NRF_AvailablePacket = true;
-
-  	if(NRF_AvailablePacket)
 		{
-			NRF_AvailablePacket = false;
-
 			uint8_t readData[32] = {0};
 			NRF_GetPacket(&readData);
 
-			strcat(NRF_MessageBuff, readData);
-
-			if(strchr(NRF_MessageBuff, '\n') || strlen(NRF_MessageBuff) < 29)
-				NRF_AvailableMessage = true;
-		}
-
-		if(NRF_AvailableMessage)
-		{
-			NRF_AvailableMessage = false;
+			InputMessageHandler(readData);
 			sendAnswer = true;
-
-			InputMessageHandler(NRF_MessageBuff);
-
-			char buff[512] = {0};
-			sprintf(buff, "STM get message [%d]: %s", strlen(NRF_MessageBuff), NRF_MessageBuff);
-			HAL_UART_Transmit(&huart1, buff, strlen(buff), 1000);
-
-			NRF_ClearMessageBuff();
 		}
 
 		if(sendAnswer)
 		{
 			sendAnswer = false;
 			char buff[128] = {0};
-			uint8_t *sendBuff = "Hello";
-			uint8_t localHub1[] = {'2', 'N', 'o', 'd', 'e'};
+			char *sendBuff = "Hello";
+			uint8_t localHub1[] = {0, 'N', 'o', 'd', 'e'};
 
 			uint8_t sendMessage = NRF_SendMessage(localHub1, sendBuff);
 
@@ -223,187 +177,12 @@ void SystemClock_Config(void)
   }
 }
 
-/**
-  * @brief SPI1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_SPI1_Init(void)
-{
-
-  /* USER CODE BEGIN SPI1_Init 0 */
-
-  /* USER CODE END SPI1_Init 0 */
-
-  /* USER CODE BEGIN SPI1_Init 1 */
-
-  /* USER CODE END SPI1_Init 1 */
-  /* SPI1 parameter configuration*/
-  hspi1.Instance = SPI1;
-  hspi1.Init.Mode = SPI_MODE_MASTER;
-  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
-  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
-  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi1.Init.CRCPolynomial = 10;
-  if (HAL_SPI_Init(&hspi1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN SPI1_Init 2 */
-
-  /* USER CODE END SPI1_Init 2 */
-
-}
-
-/**
-  * @brief SPI2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_SPI2_Init(void)
-{
-
-  /* USER CODE BEGIN SPI2_Init 0 */
-
-  /* USER CODE END SPI2_Init 0 */
-
-  /* USER CODE BEGIN SPI2_Init 1 */
-
-  /* USER CODE END SPI2_Init 1 */
-  /* SPI2 parameter configuration*/
-  hspi2.Instance = SPI2;
-  hspi2.Init.Mode = SPI_MODE_MASTER;
-  hspi2.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi2.Init.NSS = SPI_NSS_SOFT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
-  hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
-  hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi2.Init.CRCPolynomial = 10;
-  if (HAL_SPI_Init(&hspi2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN SPI2_Init 2 */
-
-  /* USER CODE END SPI2_Init 2 */
-
-}
-
-/**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART1_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART1_Init 0 */
-
-  /* USER CODE END USART1_Init 0 */
-
-  /* USER CODE BEGIN USART1_Init 1 */
-
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART1_Init 2 */
-
-  /* USER CODE END USART1_Init 2 */
-
-}
-
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(BuildInLed_GPIO_Port, BuildInLed_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, SPI1_CSN_Pin|SPI1_CE_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin : BuildInLed_Pin */
-  GPIO_InitStruct.Pin = BuildInLed_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(BuildInLed_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : SPI1_IRQ_Pin */
-  GPIO_InitStruct.Pin = SPI1_IRQ_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(SPI1_IRQ_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : SPI1_CSN_Pin SPI1_CE_Pin */
-  GPIO_InitStruct.Pin = SPI1_CSN_Pin|SPI1_CE_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB12 */
-  GPIO_InitStruct.Pin = GPIO_PIN_12;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI2_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI2_IRQn);
-
-}
-
 /* USER CODE BEGIN 4 */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-		NRF_CallbackFunc();
-}
-
 void InputMessageHandler(char *message)
 {
 	uint8_t cursorPosition = 0;
-	uint8_t messageLen = strlen(message);
 
-	//TODO: Организовать цикл
-	char currentValue = message[cursorPosition];
-
-	switch(currentValue)
+	switch(message[cursorPosition])
 	{
 		case 0x01: HAL_GPIO_WritePin(BuildInLed_GPIO_Port, BuildInLed_Pin, 0); break;
 		case 0x02: HAL_GPIO_WritePin(BuildInLed_GPIO_Port, BuildInLed_Pin, 1); break;
@@ -457,9 +236,78 @@ void InputMessageHandler(char *message)
 		case 0x22: SR_ResetPin(15); break;
 
 
-		//default:
-			//if(cursorPosition < messageLen)
-				//++cursorPosition;
+
+		/* TIM2_CHANNEL_1 */
+		case 0x23:
+			HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+			TIM2->CCR1 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
+			break;
+
+		case 0x24:
+			TIM2->CCR1 = 0;
+			HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+			break;
+
+		/* TIM2_CHANNEL_2 */
+		case 0x25:
+			HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+			TIM2->CCR2 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
+			break;
+
+		case 0x26:
+			TIM2->CCR2 = 0;
+			HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);
+			break;
+
+
+		/* TIM4_CHANNEL_4 */
+		case 0x27:
+			HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
+			TIM4->CCR4 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
+			break;
+
+		case 0x28:
+			TIM4->CCR4 = 0;
+			HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_4);
+			break;
+
+		/* TIM4_CHANNEL_3 */
+		case 0x29:
+			HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
+			TIM4->CCR3 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
+			break;
+
+		case 0x3A:
+			TIM4->CCR3 = 0;
+			HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_3);
+			break;
+
+		/* TIM4_CHANNEL_2 */
+		case 0x3B:
+			HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+			TIM4->CCR2 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
+			break;
+
+		case 0x3C:
+			TIM4->CCR2 = 0;
+			HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_2);
+			break;
+
+		/* TIM4_CHANNEL_1 */
+		case 0x3D:
+			HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+			TIM4->CCR1 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
+			break;
+
+		case 0x3E:
+			TIM4->CCR1 = 0;
+			HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_3);
+			break;
+
+
+
+		//TODO: Input
+
 	}
 }
 /* USER CODE END 4 */
@@ -472,7 +320,11 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-
+	while(true)
+	{
+		HAL_GPIO_TogglePin(BuildInLed_GPIO_Port, BuildInLed_Pin);
+		HAL_Delay(100);
+	}
   /* USER CODE END Error_Handler_Debug */
 }
 

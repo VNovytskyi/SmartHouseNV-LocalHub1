@@ -21,12 +21,7 @@ NRF_ShiftRegister.c:10:13:SR_Reset	8	static
 NRF_ShiftRegister.c:15:6:SR_SetValue	24	static
 NRF_ShiftRegister.c:25:6:SR_SetPin	16	static
 NRF_ShiftRegister.c:31:6:SR_ResetPin	16	static
-main.c:78:5:main	584	static
-main.c:193:6:SystemClock_Config	72	static
-main.c:231:13:MX_SPI1_Init	8	static
-main.c:269:13:MX_SPI2_Init	8	static
-main.c:307:13:MX_USART1_UART_Init	8	static
-main.c:340:13:MX_GPIO_Init	40	static
-main.c:393:6:HAL_GPIO_EXTI_Callback	16	static
-main.c:398:6:InputMessageHandler	24	static
-main.c:471:6:Error_Handler	4	static
+main.c:73:5:main	168	static
+main.c:147:6:SystemClock_Config	72	static
+main.c:181:6:InputMessageHandler	24	static
+main.c:319:6:Error_Handler	8	static
