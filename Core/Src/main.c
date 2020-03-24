@@ -52,7 +52,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+uint8_t mainHubAddr[] = {1, 1, 1, 1, 1};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -105,7 +105,6 @@ int main(void)
   SR_SetValue(0x0000);
   /* USER CODE END 2 */
  
- 
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -114,24 +113,26 @@ int main(void)
   {
   	if(NRF_IsAvailablePacket())
 		{
-			uint8_t readData[32] = {0};
-			NRF_GetPacket(&readData);
+			NRF_GetPacket(NRF_rxBuff);
 
-			InputMessageHandler(readData);
+			InputMessageHandler(NRF_rxBuff);
+
 			sendAnswer = true;
+			sprintf(NRF_txBuff, NRF_rxBuff);
+			NRF_ClearRxBuff();
 		}
 
 		if(sendAnswer)
 		{
 			sendAnswer = false;
-			char buff[128] = {0};
-			char *sendBuff = "Hello";
-			uint8_t localHub1[] = {0, 'N', 'o', 'd', 'e'};
+			uint8_t sendMessage = NRF_SendMessage(mainHubAddr, NRF_txBuff);
+			NRF_ClearTxBuff();
 
-			uint8_t sendMessage = NRF_SendMessage(localHub1, sendBuff);
 
-			sprintf(buff, "STM send message (%d) [%d]: %s",sendMessage, strlen(sendBuff), sendBuff);
-			HAL_UART_Transmit(&huart1, buff, strlen(buff), 1000);
+
+			//char buff[128] = {0};
+			//sprintf(buff, "STM send message (%d) [%d]: %s",sendMessage, strlen(sendBuff), sendBuff);
+			//HAL_UART_Transmit(&huart1, buff, strlen(buff), 1000);
 		}
     /* USER CODE END WHILE */
 
