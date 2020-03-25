@@ -21,7 +21,7 @@ NRF_ShiftRegister.c:10:13:SR_Reset	8	static
 NRF_ShiftRegister.c:15:6:SR_SetValue	24	static
 NRF_ShiftRegister.c:25:6:SR_SetPin	16	static
 NRF_ShiftRegister.c:31:6:SR_ResetPin	16	static
-main.c:73:5:main	16	static
-main.c:148:6:SystemClock_Config	72	static
-main.c:182:6:InputMessageHandler	24	static
-main.c:320:6:Error_Handler	8	static
+main.c:77:5:main	16	static
+main.c:147:6:SystemClock_Config	72	static
+main.c:181:6:InputMessageHandler	24	static
+main.c:319:6:Error_Handler	8	static

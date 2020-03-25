@@ -53,6 +53,10 @@
 
 /* USER CODE BEGIN PV */
 uint8_t mainHubAddr[] = {1, 1, 1, 1, 1};
+
+extern bool UART1_MessageReady;
+extern volatile char recvByte;
+extern char UART1_RX_buff[32];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -101,38 +105,33 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
+  HAL_UART_Receive_IT(&huart1, &recvByte, (uint16_t)1);
   NRF_SetDefaultSettings();
   SR_SetValue(0x0000);
   /* USER CODE END 2 */
  
+ 
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  bool sendAnswer = false;
+  char *str = "Hello from STM32!!!\n";
+  HAL_UART_Transmit(&huart1, str, strlen(str), 1000);
+
   while (1)
   {
   	if(NRF_IsAvailablePacket())
 		{
 			NRF_GetPacket(NRF_rxBuff);
-
 			InputMessageHandler(NRF_rxBuff);
-
-			sendAnswer = true;
-			sprintf(NRF_txBuff, NRF_rxBuff);
+			uint8_t sendMessage = NRF_SendMessage(mainHubAddr, NRF_rxBuff);
 			NRF_ClearRxBuff();
 		}
 
-		if(sendAnswer)
+		if(UART1_MessageReady)
 		{
-			sendAnswer = false;
-			uint8_t sendMessage = NRF_SendMessage(mainHubAddr, NRF_txBuff);
-			NRF_ClearTxBuff();
-
-
-
-			//char buff[128] = {0};
-			//sprintf(buff, "STM send message (%d) [%d]: %s",sendMessage, strlen(sendBuff), sendBuff);
-			//HAL_UART_Transmit(&huart1, buff, strlen(buff), 1000);
+			InputMessageHandler(UART1_RX_buff);
+			HAL_UART_Transmit(&huart1, UART1_RX_buff, strlen(UART1_RX_buff), 1000);
+			UART1_ClearRXBuff();
 		}
     /* USER CODE END WHILE */
 
