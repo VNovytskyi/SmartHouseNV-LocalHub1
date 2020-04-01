@@ -132,6 +132,7 @@ void UART1_ClearRXBuff(void)
 		UART1_RX_buff[i] = 0;
 
 	UART1_MessageReady = false;
+	HAL_UART_Receive_IT(&huart1, &recvByte, (uint16_t)1);
 }
 /* USER CODE END 1 */
 

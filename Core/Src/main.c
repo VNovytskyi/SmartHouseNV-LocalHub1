@@ -85,7 +85,6 @@ int main(void)
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -106,7 +105,7 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart1, &recvByte, (uint16_t)1);
-  NRF_SetDefaultSettings();
+  //NRF_SetDefaultSettings();
   SR_SetValue(0x0000);
   /* USER CODE END 2 */
  
@@ -114,11 +113,16 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  char *str = "Hello from STM32!!!\n";
-  HAL_UART_Transmit(&huart1, str, strlen(str), 1000);
+  for(uint8_t i = 0; i < 5; ++i)
+  {
+  	HAL_GPIO_TogglePin(BuildInLed_GPIO_Port, BuildInLed_Pin);
+  	HAL_Delay(100);
+  }
+
 
   while (1)
   {
+  	/*
   	if(NRF_IsAvailablePacket())
 		{
 			NRF_GetPacket(NRF_rxBuff);
@@ -126,11 +130,11 @@ int main(void)
 			uint8_t sendMessage = NRF_SendMessage(mainHubAddr, NRF_rxBuff);
 			NRF_ClearRxBuff();
 		}
+  	 */
 
 		if(UART1_MessageReady)
 		{
 			InputMessageHandler(UART1_RX_buff);
-			HAL_UART_Transmit(&huart1, UART1_RX_buff, strlen(UART1_RX_buff), 1000);
 			UART1_ClearRXBuff();
 		}
     /* USER CODE END WHILE */
@@ -181,133 +185,137 @@ void SystemClock_Config(void)
 void InputMessageHandler(char *message)
 {
 	uint8_t cursorPosition = 0;
+	uint8_t messageLength = strlen(message);
 
-	switch(message[cursorPosition])
+	while(cursorPosition < messageLength - 1)
 	{
-		case 0x01: HAL_GPIO_WritePin(BuildInLed_GPIO_Port, BuildInLed_Pin, 0); break;
-		case 0x02: HAL_GPIO_WritePin(BuildInLed_GPIO_Port, BuildInLed_Pin, 1); break;
+		switch(message[cursorPosition])
+		{
+			case 0x01: HAL_GPIO_WritePin(BuildInLed_GPIO_Port, BuildInLed_Pin, 0); break;
+			case 0x02: HAL_GPIO_WritePin(BuildInLed_GPIO_Port, BuildInLed_Pin, 1); break;
 
-		case 0x03: SR_SetPin(0); break;
-		case 0x04: SR_ResetPin(0); break;
+			case 0x03: SR_SetPin(0); break;
+			case 0x04: SR_ResetPin(0); break;
 
-		case 0x05: SR_SetPin(1); break;
-		case 0x06: SR_ResetPin(1); break;
+			case 0x05: SR_SetPin(1); break;
+			case 0x06: SR_ResetPin(1); break;
 
-		case 0x07: SR_SetPin(2); break;
-		case 0x08: SR_ResetPin(2); break;
+			case 0x07: SR_SetPin(2); break;
+			case 0x08: SR_ResetPin(2); break;
 
-		case 0x09: SR_SetPin(3); break;
-		case 0x0A: SR_ResetPin(3); break;
+			case 0x09: SR_SetPin(3); break;
+			case 0x0A: SR_ResetPin(3); break;
 
-		case 0x0B: SR_SetPin(4); break;
-		case 0x0C: SR_ResetPin(4); break;
+			case 0x0B: SR_SetPin(4); break;
+			case 0x0C: SR_ResetPin(4); break;
 
-		case 0x0D: SR_SetPin(5); break;
-		case 0x0E: SR_ResetPin(5); break;
+			case 0x0D: SR_SetPin(5); break;
+			case 0x0E: SR_ResetPin(5); break;
 
-		case 0x0F: SR_SetPin(6); break;
-		case 0x10: SR_ResetPin(6); break;
+			case 0x0F: SR_SetPin(6); break;
+			case 0x10: SR_ResetPin(6); break;
 
-		case 0x11: SR_SetPin(7); break;
-		case 0x12: SR_ResetPin(7); break;
+			case 0x11: SR_SetPin(7); break;
+			case 0x12: SR_ResetPin(7); break;
 
-		case 0x13: SR_SetPin(8); break;
-		case 0x14: SR_ResetPin(8); break;
+			case 0x13: SR_SetPin(8); break;
+			case 0x14: SR_ResetPin(8); break;
 
-		case 0x15: SR_SetPin(9); break;
-		case 0x16: SR_ResetPin(9); break;
+			case 0x15: SR_SetPin(9); break;
+			case 0x16: SR_ResetPin(9); break;
 
-		case 0x17: SR_SetPin(10); break;
-		case 0x18: SR_ResetPin(10); break;
+			case 0x17: SR_SetPin(10); break;
+			case 0x18: SR_ResetPin(10); break;
 
-		case 0x19: SR_SetPin(11); break;
-		case 0x1A: SR_ResetPin(11); break;
+			case 0x19: SR_SetPin(11); break;
+			case 0x1A: SR_ResetPin(11); break;
 
-		case 0x1B: SR_SetPin(12); break;
-		case 0x1C: SR_ResetPin(12); break;
+			case 0x1B: SR_SetPin(12); break;
+			case 0x1C: SR_ResetPin(12); break;
 
-		case 0x1D: SR_SetPin(13); break;
-		case 0x1E: SR_ResetPin(13); break;
+			case 0x1D: SR_SetPin(13); break;
+			case 0x1E: SR_ResetPin(13); break;
 
-		case 0x1F: SR_SetPin(14); break;
-		case 0x20: SR_ResetPin(14); break;
+			case 0x1F: SR_SetPin(14); break;
+			case 0x20: SR_ResetPin(14); break;
 
-		case 0x21: SR_SetPin(15); break;
-		case 0x22: SR_ResetPin(15); break;
-
-
-
-		/* TIM2_CHANNEL_1 */
-		case 0x23:
-			HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-			TIM2->CCR1 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
-			break;
-
-		case 0x24:
-			TIM2->CCR1 = 0;
-			HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
-			break;
-
-		/* TIM2_CHANNEL_2 */
-		case 0x25:
-			HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
-			TIM2->CCR2 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
-			break;
-
-		case 0x26:
-			TIM2->CCR2 = 0;
-			HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);
-			break;
-
-
-		/* TIM4_CHANNEL_4 */
-		case 0x27:
-			HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
-			TIM4->CCR4 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
-			break;
-
-		case 0x28:
-			TIM4->CCR4 = 0;
-			HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_4);
-			break;
-
-		/* TIM4_CHANNEL_3 */
-		case 0x29:
-			HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
-			TIM4->CCR3 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
-			break;
-
-		case 0x3A:
-			TIM4->CCR3 = 0;
-			HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_3);
-			break;
-
-		/* TIM4_CHANNEL_2 */
-		case 0x3B:
-			HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
-			TIM4->CCR2 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
-			break;
-
-		case 0x3C:
-			TIM4->CCR2 = 0;
-			HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_2);
-			break;
-
-		/* TIM4_CHANNEL_1 */
-		case 0x3D:
-			HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
-			TIM4->CCR1 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
-			break;
-
-		case 0x3E:
-			TIM4->CCR1 = 0;
-			HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_3);
-			break;
+			case 0x21: SR_SetPin(15); break;
+			case 0x22: SR_ResetPin(15); break;
 
 
 
-		//TODO: Input
+			/* TIM2_CHANNEL_1 */
+			case 0x23:
+				HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+				TIM2->CCR1 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
+				break;
 
+			case 0x24:
+				TIM2->CCR1 = 0;
+				HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+				break;
+
+			/* TIM2_CHANNEL_2 */
+			case 0x25:
+				HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+				TIM2->CCR2 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
+				break;
+
+			case 0x26:
+				TIM2->CCR2 = 0;
+				HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);
+				break;
+
+
+			/* TIM4_CHANNEL_4 */
+			case 0x27:
+				HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
+				TIM4->CCR4 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
+				break;
+
+			case 0x28:
+				TIM4->CCR4 = 0;
+				HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_4);
+				break;
+
+			/* TIM4_CHANNEL_3 */
+			case 0x29:
+				HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
+				TIM4->CCR3 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
+				break;
+
+			case 0x3A:
+				TIM4->CCR3 = 0;
+				HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_3);
+				break;
+
+			/* TIM4_CHANNEL_2 */
+			case 0x3B:
+				HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+				TIM4->CCR2 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
+				break;
+
+			case 0x3C:
+				TIM4->CCR2 = 0;
+				HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_2);
+				break;
+
+			/* TIM4_CHANNEL_1 */
+			case 0x3D:
+				HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+				TIM4->CCR1 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
+				break;
+
+			case 0x3E:
+				TIM4->CCR1 = 0;
+				HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_3);
+				break;
+
+			//TODO: Input
+
+		}
+
+		++cursorPosition;
 	}
 }
 /* USER CODE END 4 */
