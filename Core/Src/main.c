@@ -52,7 +52,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t mainHubAddr[] = {1, 1, 1, 1, 1};
+#define ownNum  2
+
+const uint8_t serverAddr[] = {1, 1, 1, 1, 1};
+const uint8_t ownAddr[] = {ownNum, 1, 1, 1, 1};
 
 extern bool UART1_MessageReady;
 extern volatile char recvByte;
@@ -85,6 +88,7 @@ int main(void)
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
+
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -105,7 +109,7 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart1, &recvByte, (uint16_t)1);
-  //NRF_SetDefaultSettings();
+  NRF_Init(serverAddr, ownAddr);
   SR_SetValue(0x0000);
   /* USER CODE END 2 */
  
@@ -113,24 +117,23 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  for(uint8_t i = 0; i < 5; ++i)
-  {
-  	HAL_GPIO_TogglePin(BuildInLed_GPIO_Port, BuildInLed_Pin);
-  	HAL_Delay(100);
-  }
 
+  uint8_t readyCommand[] = {0xff, ownNum, 0x01, '\n'};
+  NRF_SendMessage(serverAddr, readyCommand);
 
   while (1)
   {
-  	/*
   	if(NRF_IsAvailablePacket())
 		{
 			NRF_GetPacket(NRF_rxBuff);
 			InputMessageHandler(NRF_rxBuff);
-			uint8_t sendMessage = NRF_SendMessage(mainHubAddr, NRF_rxBuff);
+
+			uint8_t sendMessage = 0;
+			if(NRF_rxBuff[0] != 0x01)
+				sendMessage = NRF_SendMessage(serverAddr, NRF_rxBuff);
+
 			NRF_ClearRxBuff();
 		}
-  	 */
 
 		if(UART1_MessageReady)
 		{
@@ -161,7 +164,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL8;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -187,12 +190,21 @@ void InputMessageHandler(char *message)
 	uint8_t cursorPosition = 0;
 	uint8_t messageLength = strlen(message);
 
-	while(cursorPosition < messageLength - 1)
+	uint8_t readyCommand[] = {0xff, ownNum, 0x02, '\n'};
+
+	while(cursorPosition <= messageLength - 1)
 	{
 		switch(message[cursorPosition])
 		{
-			case 0x01: HAL_GPIO_WritePin(BuildInLed_GPIO_Port, BuildInLed_Pin, 0); break;
-			case 0x02: HAL_GPIO_WritePin(BuildInLed_GPIO_Port, BuildInLed_Pin, 1); break;
+			//Command reserved
+			case 0x00: break;
+
+			case 0x01:
+				NRF_SendMessage(serverAddr, readyCommand);
+				break;
+
+			case 0x02:
+				break;
 
 			case 0x03: SR_SetPin(0); break;
 			case 0x04: SR_ResetPin(0); break;
@@ -284,35 +296,41 @@ void InputMessageHandler(char *message)
 				TIM4->CCR3 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
 				break;
 
-			case 0x3A:
+			case 0x2A:
 				TIM4->CCR3 = 0;
 				HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_3);
 				break;
 
 			/* TIM4_CHANNEL_2 */
-			case 0x3B:
+			case 0x2B:
 				HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
 				TIM4->CCR2 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
 				break;
 
-			case 0x3C:
+			case 0x2C:
 				TIM4->CCR2 = 0;
 				HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_2);
 				break;
 
 			/* TIM4_CHANNEL_1 */
-			case 0x3D:
+			case 0x2D:
 				HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
 				TIM4->CCR1 = ((uint16_t)message[++cursorPosition] << 8) | message[++cursorPosition];
 				break;
 
-			case 0x3E:
+			case 0x2E:
 				TIM4->CCR1 = 0;
-				HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_3);
+				HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_1);
 				break;
 
 			//TODO: Input
 
+			//Command reserved
+			case 0xFF: break;
+
+			default:
+				//TODO: Написать обработчик
+				break;
 		}
 
 		++cursorPosition;

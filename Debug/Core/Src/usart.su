@@ -1,5 +1,0 @@
-usart.c:37:6:MX_USART1_UART_Init	8	static
-usart.c:55:6:HAL_UART_MspInit	40	static
-usart.c:91:6:HAL_UART_MspDeInit	16	static
-usart.c:117:6:HAL_UART_RxCpltCallback	16	static
-usart.c:129:6:UART1_ClearRXBuff	16	static
