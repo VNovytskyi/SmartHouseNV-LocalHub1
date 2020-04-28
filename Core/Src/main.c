@@ -32,7 +32,7 @@
 #include "math.h"
 
 #include "NRF.h"
-#include "NRF_ShiftRegister.h"
+#include "ShiftRegister.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,7 +46,8 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define PC_SEND(str) HAL_UART_Transmit(&huart1, str, strlen(str), 1000);
+//#define PC_SEND(str) ;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -66,6 +67,7 @@ extern char UART1_RX_buff[32];
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void InputMessageHandler(char *message);
+int8_t SendMsg(uint8_t *receiverAddress, uint8_t *buf, uint8_t dataLength, uint8_t attemptCount, uint8_t delayBetweenAttemps);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -82,7 +84,6 @@ int main(void)
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
-  
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -108,38 +109,82 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&huart1, &recvByte, (uint16_t)1);
-  NRF_Init(serverAddr, ownAddr);
   SR_SetValue(0x0000);
+  NRF_Init(serverAddr, ownAddr);
   /* USER CODE END 2 */
- 
- 
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  PC_SEND("\nBegin\n");
 
-  uint8_t readyCommand[] = {0xff, ownNum, 0x01, '\n'};
-  NRF_SendMessage(serverAddr, readyCommand);
+  /*
+   * Отправка сообщения готовности на сервер.
+   * Не изменять код! При выносе кода в функцию перестает работать!
+   */
+  int result = -2;
+  uint8_t readyCommand[] = {0xff, ownNum, 0x01};
+  NRF_TX_Mode();
+  NRF_SendPacket(serverAddr, readyCommand, 3, W_TX_PAYLOAD);
+  for(uint8_t i = 0; i < 10 && result != 1; ++i)
+  {
+  	result = NRF_SendPacket(serverAddr, readyCommand, 3, W_TX_PAYLOAD);
+  	PC_SEND("[ WARNING ] Ready-packet did not sent. Try again.\n");
+  	HAL_Delay(100);
+  }
+  NRF_RX_Mode();
+
+
+  if(result == 1)
+  {
+  	PC_SEND("[ OK ] Ready-packet was sent\n");
+  }
+  else if(result == 0)
+  {
+  	PC_SEND("[ WARNING ] Ready-packet did not sent\n");
+  }
+  else
+  {
+  	PC_SEND("[ ERROR ] Not handler\n");
+  }
+
 
   while (1)
   {
-  	if(NRF_IsAvailablePacket())
+  	if((NRF_IRQ_GPIO_Port->IDR & NRF_IRQ_Pin) == (uint32_t)GPIO_PIN_RESET)
 		{
-			NRF_GetPacket(NRF_rxBuff);
-			InputMessageHandler(NRF_rxBuff);
+  		PC_SEND("NRF IRQ\n");
 
-			uint8_t sendMessage = 0;
-			if(NRF_rxBuff[0] != 0x01)
-				sendMessage = NRF_SendMessage(serverAddr, NRF_rxBuff);
+  		uint8_t status = NRF_GetStatus();
+  		uint8_t FIFO = NRF_ReadReg(NRF_REG_FIFO_STATUS);
 
-			NRF_ClearRxBuff();
+  		if(!(FIFO & _BV(RX_EMPTY)))
+  		{
+  			while(!(FIFO & _BV(RX_EMPTY)))
+  			{
+  				PC_SEND("NRF Available packet\n");
+  				uint8_t pipeNum = NRF_GetPipeNum();
+  				NRF_GetPacket(NRF_rxBuff);
+  				InputMessageHandler(NRF_rxBuff);
+  				NRF_ClearRxBuff();
+
+  				FIFO = NRF_ReadReg(NRF_REG_FIFO_STATUS);
+  				status = NRF_GetStatus();
+  			}
+  			NRF_WriteReg(NRF_REG_STATUS, _BV(RX_DR));
+  		}
+  		else
+  		{
+  			PC_SEND("NRF Not packet\n");
+  		}
 		}
 
+  	/*
 		if(UART1_MessageReady)
 		{
 			InputMessageHandler(UART1_RX_buff);
 			UART1_ClearRXBuff();
 		}
+		*/
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -190,7 +235,8 @@ void InputMessageHandler(char *message)
 	uint8_t cursorPosition = 0;
 	uint8_t messageLength = strlen(message);
 
-	uint8_t readyCommand[] = {0xff, ownNum, 0x02, '\n'};
+	int result = 0;
+	uint8_t onlineCommand[] = {0xff, ownNum, 0x02};
 
 	while(cursorPosition <= messageLength - 1)
 	{
@@ -199,13 +245,40 @@ void InputMessageHandler(char *message)
 			//Command reserved
 			case 0x00: break;
 
+			/*
+			 * Send online command
+			 */
 			case 0x01:
-				NRF_SendMessage(serverAddr, readyCommand);
+				NRF_TX_Mode();
+				for(uint8_t i = 0; i < 10 && result != 1; ++i)
+				{
+					result = NRF_SendPacket(serverAddr, onlineCommand, 3, W_TX_PAYLOAD);
+				  PC_SEND("[ WARNING ] Online-packet did not sent.\n");
+				  HAL_Delay(100);
+				 }
+				 NRF_RX_Mode();
+
+				 if(result == 1)
+				 {
+					 PC_SEND("[ OK ] Online-packet was sent\n");
+				 }
+				 else if(result == 0)
+				 {
+					 PC_SEND("[ WARNING ] Online-packet did not sent\n");
+				 }
+				 else
+				 {
+				   PC_SEND("[ ERROR ] Not handler\n");
+				 }
 				break;
 
 			case 0x02:
 				break;
 
+
+			/*
+			 * Work with localHub portA
+			 */
 			case 0x03: SR_SetPin(0); break;
 			case 0x04: SR_ResetPin(0); break;
 
@@ -255,6 +328,10 @@ void InputMessageHandler(char *message)
 			case 0x22: SR_ResetPin(15); break;
 
 
+
+			/*
+			 * Work with localHub portB
+			 */
 
 			/* TIM2_CHANNEL_1 */
 			case 0x23:
@@ -335,6 +412,24 @@ void InputMessageHandler(char *message)
 
 		++cursorPosition;
 	}
+}
+
+int8_t SendMsg(uint8_t *receiverAddress, uint8_t *buf, uint8_t dataLength, uint8_t attemptCount, uint8_t delayBetweenAttemps)
+{
+		int8_t result = -2;
+
+		NRF_TX_Mode();
+
+		for(uint8_t i = 0; i < attemptCount && result != 1; ++i)
+		{
+			result = NRF_SendPacket(receiverAddress, buf, dataLength, W_TX_PAYLOAD);
+			PC_SEND("[ WARNING ] Ready-packet did not sent.\n");
+		  HAL_Delay(delayBetweenAttemps);
+		}
+
+		NRF_RX_Mode();
+
+		return result;
 }
 /* USER CODE END 4 */
 
