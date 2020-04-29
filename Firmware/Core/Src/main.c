@@ -170,7 +170,7 @@ int main(void)
   				FIFO = NRF_ReadReg(NRF_REG_FIFO_STATUS);
   				status = NRF_GetStatus();
   			}
-  			NRF_WriteReg(NRF_REG_STATUS, _BV(RX_DR));
+
   		}
   		else
   		{
