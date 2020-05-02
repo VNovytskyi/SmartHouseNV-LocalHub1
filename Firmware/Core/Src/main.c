@@ -110,6 +110,7 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   SR_SetValue(0x0000);
+  HAL_UART_Receive_IT(&huart1, &recvByte, (uint16_t)1);
   NRF_Init(serverAddr, ownAddr);
   /* USER CODE END 2 */
 
@@ -129,9 +130,12 @@ int main(void)
   {
   	result = NRF_SendPacket(serverAddr, readyCommand, 3, W_TX_PAYLOAD);
   	PC_SEND("[ WARNING ] Ready-packet did not sent. Try again.\n");
-  	HAL_Delay(100);
+  	HAL_Delay(10);
   }
   NRF_RX_Mode();
+  /*
+   * Конец бага
+   */
 
 
   if(result == 1)
@@ -178,13 +182,11 @@ int main(void)
   		}
 		}
 
-  	/*
 		if(UART1_MessageReady)
 		{
 			InputMessageHandler(UART1_RX_buff);
 			UART1_ClearRXBuff();
 		}
-		*/
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
