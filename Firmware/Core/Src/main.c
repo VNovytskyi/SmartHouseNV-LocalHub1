@@ -46,7 +46,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define PC_SEND(str) HAL_UART_Transmit(&huart1, str, strlen(str), 1000);
+#define PC_SEND(str) HAL_UART_Transmit(&huart1, (uint8_t*)str, strlen(str), 1000);
 //#define PC_SEND(str) ;
 /* USER CODE END PM */
 
@@ -59,8 +59,11 @@ const uint8_t serverAddr[] = {1, 1, 1, 1, 1};
 const uint8_t ownAddr[] = {ownNum, 1, 1, 1, 1};
 
 extern bool UART1_MessageReady;
-extern volatile char recvByte;
+extern volatile uint8_t recvByte;
 extern char UART1_RX_buff[32];
+
+extern uint32_t startReceivingMessageTime;
+extern bool startReceivingMessage;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -68,6 +71,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void InputMessageHandler(char *message);
 int8_t SendMsg(uint8_t *receiverAddress, uint8_t *buf, uint8_t dataLength, uint8_t attemptCount, uint8_t delayBetweenAttemps);
+void UART1_ClearRXBuff(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -154,19 +158,21 @@ int main(void)
 
   while (1)
   {
+  	//NRF
   	if((NRF_IRQ_GPIO_Port->IDR & NRF_IRQ_Pin) == (uint32_t)GPIO_PIN_RESET)
 		{
   		PC_SEND("NRF IRQ\n");
 
   		uint8_t status = NRF_GetStatus();
   		uint8_t FIFO = NRF_ReadReg(NRF_REG_FIFO_STATUS);
+  		uint8_t pipeNum = NRF_GetPipeNum();
 
   		if(!(FIFO & _BV(RX_EMPTY)))
   		{
   			while(!(FIFO & _BV(RX_EMPTY)))
   			{
   				PC_SEND("NRF Available packet\n");
-  				uint8_t pipeNum = NRF_GetPipeNum();
+
   				NRF_GetPacket(NRF_rxBuff);
   				InputMessageHandler(NRF_rxBuff);
   				NRF_ClearRxBuff();
@@ -182,11 +188,22 @@ int main(void)
   		}
 		}
 
+  	//UART
 		if(UART1_MessageReady)
 		{
 			InputMessageHandler(UART1_RX_buff);
 			UART1_ClearRXBuff();
 		}
+
+		//Protection from incorrect message from UART
+		if(HAL_GetTick() - startReceivingMessageTime < 1000)
+		{
+			PC_SEND("[ WARNING ] Message from UART are damaged!");
+			PC_SEND("Clear UART buffer.");
+			startReceivingMessage = false;
+			UART1_ClearRXBuff();
+		}
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

@@ -23,7 +23,7 @@
 /* USER CODE BEGIN 0 */
 #include "stdbool.h"
 
-volatile char recvByte;
+volatile uint8_t recvByte;
 int UART1_RX_buff_index = 0;
 char UART1_RX_buff[32];
 bool UART1_MessageReady = false;
@@ -114,6 +114,8 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 } 
 
 /* USER CODE BEGIN 1 */
+bool startReceivingMessage = false;
+uint32_t startReceivingMessageTime = 0;
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 		if(recvByte == '\n')
@@ -121,11 +123,21 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			UART1_MessageReady = true;
 			UART1_RX_buff[UART1_RX_buff_index++] = '\0';
 			UART1_RX_buff_index = 0;
+
+			//Test
+			startReceivingMessage = false;
 		}
 		else
 		{
 			UART1_RX_buff[UART1_RX_buff_index++] = recvByte;
 			HAL_UART_Receive_IT(&huart1, &recvByte, (uint16_t)1);
+
+			//Test
+			if(startReceivingMessage == false)
+			{
+				startReceivingMessage = true;
+				startReceivingMessageTime = HAL_GetTick();
+			}
 		}
 }
 
