@@ -62,6 +62,7 @@ void Error_Handler(void);
 #define BuildInLed_GPIO_Port GPIOC
 #define NRF_IRQ_Pin GPIO_PIN_2
 #define NRF_IRQ_GPIO_Port GPIOA
+#define NRF_IRQ_EXTI_IRQn EXTI2_IRQn
 #define SPI1_CSN_Pin GPIO_PIN_3
 #define SPI1_CSN_GPIO_Port GPIOA
 #define SPI1_CE_Pin GPIO_PIN_4

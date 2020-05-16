@@ -66,6 +66,7 @@ extern char UART1_RX_buff[32];
 
 extern uint32_t startReceivingMessageTime;
 extern bool startReceivingMessage;
+bool NRF_IRQ = false;
 
 extern uint8_t UserRxBufferFS[];
 /* USER CODE END PV */
@@ -117,10 +118,12 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM4_Init();
   MX_USB_DEVICE_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   SR_SetValue(0x0000);
   HAL_UART_Receive_IT(&huart1, &recvByte, (uint16_t)1);
   NRF_Init(serverAddr, ownAddr);
+  HAL_TIM_Base_Start_IT(&htim3);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -163,62 +166,46 @@ int main(void)
 
   while (1)
   {
-  	//NRF
-  	if((NRF_IRQ_GPIO_Port->IDR & NRF_IRQ_Pin) == (uint32_t)GPIO_PIN_RESET)
-		{
-  		PC_SEND("NRF IRQ\n");
 
+  	if(NRF_IRQ == true)
+  	{
   		uint8_t status = NRF_GetStatus();
-  		uint8_t FIFO = NRF_ReadReg(NRF_REG_FIFO_STATUS);
-  		uint8_t pipeNum = NRF_GetPipeNum();
+			uint8_t FIFO = NRF_ReadReg(NRF_REG_FIFO_STATUS);
+			uint8_t pipeNum = NRF_GetPipeNum();
 
-  		if(!(FIFO & _BV(RX_EMPTY)))
-  		{
-  			while(!(FIFO & _BV(RX_EMPTY)))
-  			{
-  				PC_SEND("NRF Available packet\n");
+			if(!(FIFO & _BV(RX_EMPTY)))
+			{
+				while(!(FIFO & _BV(RX_EMPTY)))
+				{
+					NRF_GetPacket(NRF_rxBuff);
+					InputMessageHandler(NRF_rxBuff);
+					NRF_ClearRxBuff();
 
-  				NRF_GetPacket(NRF_rxBuff);
-  				InputMessageHandler(NRF_rxBuff);
-  				NRF_ClearRxBuff();
+					FIFO = NRF_ReadReg(NRF_REG_FIFO_STATUS);
+					status = NRF_GetStatus();
+				}
 
-  				FIFO = NRF_ReadReg(NRF_REG_FIFO_STATUS);
-  				status = NRF_GetStatus();
-  			}
+			}
 
-  		}
-  		else
-  		{
-  			PC_SEND("NRF Not packet\n");
-  		}
-		}
+			NRF_IRQ = false;
+  	}
 
-  	//UART
-		if(UART1_MessageReady)
-		{
-			InputMessageHandler(UART1_RX_buff);
-			UART1_ClearRXBuff();
-		}
+			//UART
+			if(UART1_MessageReady)
+			{
+				InputMessageHandler(UART1_RX_buff);
+				UART1_ClearRXBuff();
+			}
 
-		//USB
-		uint8_t recvComBuffLen = strlen(UserRxBufferFS);
-		if(recvComBuffLen > 0)
-		{
-			CDC_Transmit_FS(UserRxBufferFS, recvComBuffLen);
-			InputMessageHandler(UserRxBufferFS);
-			memset(UserRxBufferFS, 0, recvComBuffLen);
-		}
+			//USB
+			uint8_t recvComBuffLen = strlen(UserRxBufferFS);
+			if(recvComBuffLen > 0)
+			{
+				//CDC_Transmit_FS(UserRxBufferFS, recvComBuffLen);
+				InputMessageHandler(UserRxBufferFS);
+				memset(UserRxBufferFS, 0, recvComBuffLen);
+			}
 
-		/*
-		//Protection from incorrect message from UART
-		if(HAL_GetTick() - startReceivingMessageTime < 1000)
-		{
-			PC_SEND("[ WARNING ] Message from UART are damaged!");
-			PC_SEND("Clear UART buffer.");
-			startReceivingMessage = false;
-			UART1_ClearRXBuff();
-		}
-		*/
 
     /* USER CODE END WHILE */
 
@@ -472,6 +459,14 @@ int8_t SendMsg(uint8_t *receiverAddress, uint8_t *buf, uint8_t dataLength, uint8
 		NRF_RX_Mode();
 
 		return result;
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if(htim->Instance == TIM3)
+  {
+    HAL_GPIO_TogglePin(BuildInLed_GPIO_Port, BuildInLed_Pin);
+  }
 }
 /* USER CODE END 4 */
 
